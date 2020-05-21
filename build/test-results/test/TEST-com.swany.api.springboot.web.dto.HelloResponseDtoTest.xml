@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.swany.api.springboot.web.dto.HelloResponseDtoTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2020-05-16T14:16:30" hostname="DESKTOP-59IA8D8" time="0.021">
-  <properties/>
-  <testcase name="롬복_기능_테스트" classname="com.swany.api.springboot.web.dto.HelloResponseDtoTest" time="0.021"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
