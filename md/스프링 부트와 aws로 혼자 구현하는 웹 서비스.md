@@ -143,7 +143,6 @@ java를 사용하므로 JUnit을 시용.
 패키지 생성을 하면 java class를 클릭하여 Application으로 생성.
 주의!! 클래스 파일은 앞글자가 무조건 대문자이여야한다.
 ````
-![](../img/20200317_191218.jpg)
 
 # 챕터6. AWS 서버 환경
 외부에서 본인이 만든 서비스에 접근을 할려면??<br>
@@ -826,3 +825,192 @@ EC2에 복사한 주소 붙여넣기 방법 : 마우스 우클릭
 코드들이 잘 수행이 되는지 테스트로 검증.
 
     ./gradlew test   
+    
+만약 테스트가 실패해서 수정하고 깃허브에 푸시를 했다면
+<br>
+프로그램 폴더 안에 명령어를 사용.
+    
+    git pull
+    
+gradlew 실행 권한이 없다는 메세지가 뜨면
+
+    -bash: ./gradlew: Permission denied
+    
+다음 명령어로 실행 권한을 추가한 뒤 다시 테스트를 수행하면 됩니다.
+
+    chmod +x ./gradlew
+    
+ec2 git 디렉토리에 파일을 잘못 넣는 경우 ec2 디렉토리 지우는법
+
+    
+    rm -rf 삭제하고자 하는 디렉토리명
+    
+    중요!! 상위폴더에서 지우기
+
+권한이 안되는 경우
+
+    root    ALL=(ALL)    ALL
+    
+    ec2-user    ALL=(ALL) ALL
+    
+세팅을 다하고 다시 테스트를 실행을 하면
+
+![3](../img/8장/3.png)   
+
+성공적으로 테스트완료.
+
+## 8.2. 배포 스크립트 만들기
+
+배포 : 작성한 코드를 실제 서버에 반영하는 것.
+
+    * git clone 혹은 git pull을 통해 새 버전의 프로젝트 받음
+    
+    * gradle이나 maven을 통해 프로젝트 테스트와 빌드.
+    
+    * EC2 서버에서 해당 프로젝트 실행 및 재실행.
+    
+배포할 때마다 개발자 하나하나 명령어를 실행하는 것은 불편함이 많았다.
+
+쉘 스크립트를 이용해 스크립트만 실행 해보자.
+
+확장자 : .sh
+
+리눅스에서 기본은 사용 가능.
+
+빔 : GUI(마우스 환경) 가 아닌 환경에서 사용할 수있는 도구.
+                
+~/app/step1/에 deploy.sh 파일을 하나 생성
+
+    vim ~/app/step1/deploy.sh        
+    
+빔 사용법
+
+    #!/bin/bash
+    
+    REPOSITORY=/home/ec2-user/app/step1
+    PROJECT_NAME=com.swany.api
+    
+    cd $REPOSITORY/$PROJECT_NAME/
+    
+    echo "> Git Pull"
+    
+    git pull
+    
+    echo "> 프로젝트 Build 시작"
+    
+    ./gradlew build
+    
+    echo "> step1 디렉토리로 이동"
+    
+    cd $REPOSITORY
+    
+    echo "> Build 파일 복사"
+    
+    cp $REPOSITORY/$PROJECT_NAME/build/libs/*.jar $REPOSITORY/
+    
+    echo "> 현재 구동중인 애플리케이션 pid 확인"
+    
+    CURRENT_PID=$(pgrep -f ${PROJECT_NAME}*.jar)
+    
+    echo "현재 구동 중인 애플리케이션 pid: $CURRENT_PID"
+    
+    if [ -z "$CURRENT_PID" ]; then
+            echo "> 현재 구동 중인 애플리케이션이 없으므로 종료하지 않습니다."
+    else
+            echo "> kill -15 $CURRENT_PID"
+            kill -15 $CURRENT_PID
+            sleep 5
+    fi
+    
+    echo "> 새 애플리케이션 배포"
+    
+    JAR_NAME=$(ls -tr $REPOSITORY/ | grep *.jar | tail -n 1)
+    
+    echo "> JAR Name : $JAR_NAME"
+    
+    nohup java -jar $REPOSITORY/$JAR_NAME 2>&1 &
+
+
+1.  REPOSITORY=/home/ec2-user/app/step1
+    
+    * 프로젝트 디렉토리 주소를 변수로 저장.
+    
+    * 프로젝트 이름도 동일한 방법으로 저장.
+    
+    * 쉘에서는 타입 없이 저장가능.
+    
+    * 쉘에서는 $ 변수명으로 변수를 사용할 수 있음.
+
+2. cd $REPOSITORY/$PROJECT_NAME/
+
+    * 제일 처음 git clone 받았던 디렉토리로 이동.
+    
+    * 바로 위의 쉘 변수 설명을 따라 /home/ec2-user/app/step1/com.swany.api(프로젝트이름) 주소로 이동.
+    
+3. git pull
+
+    * 디렉토리 이동 후, master 브랜치의 최신 내용을 받습니다..
+    
+4. ./gradlew build
+
+    * 프로젝트 내부의 gradlew로 build를 수행합니다.
+    
+5. cp./build/libs/*.jar $REPOSITORY/
+
+    * build의 결과물인 jar 파일을 복사해 jar 파일을 모아둔 위치로 복사.
+    
+6. CURRENT_PID=$(pgrep -f springboot-webservice)
+
+    * 기존에 수행 중이던 스프링 부트 애플리케이션을 종료합니다.
+    
+    * pgrep은 process id만 추출하는 명령어입니다.
+    
+    * -f 옵션은 프로세스 이름으로 찾습니다.
+    
+7. if ~ else ~ fi
+    
+    * 현재 구동 주인 프로세스가 있는지 없는지를 판단해서 기능을 수행합니다.
+    
+    * process id 값을 보고 프로세스가 있으면 해당 프로세스를 종료합니다.
+    
+8. JAR_NAME=$(ls -tr $REPOSITORY/ | grep *.jar | tail -n 1)
+
+    * 새로 실행할 jar 파일명을 찾습니다.
+    
+    * 여러 jar 파일이 생기기 때문에 tail -n로 가장 나중의 jar 파일(최신 파일)을 변수에 저장합니다.
+    
+9. nohup java -jar $REPOSITORY/$JAR_NAME 2>&1 &    
+        
+    * 찾은 jar 파일명으로 해당 jar 파일을 nohup으로 실행합니다.
+    
+    * 스플링 부트의 장점으로 특별히 외장 톰캣을 설치할 필요가 없다.
+    
+    * 내장 톰캣을 사용해서 jar 파일만 있으면 바로 웹 애플리케이션 서버를 실행할 수 있습니다.
+    
+    * 일반적으로 자바를 실행할 때는 java -jar라는 명령어를 사용하지만, 이렇게 하면 사용자가 터미널 접속을 끓을 때 애플리케이션도 같이  애플리케이션도 같이 종료됩니다.
+    
+    * 애플리케이션 실행자가 터미널을 종료해도 애플리케이션은 계속 구동될 수 있도록 nohup 명령어를 사용합니다.
+    
+
+스크립트 실행 권한 추가.
+
+    chmod +x ./deploy.sh
+    
+x 권한 추가 확인. 
+
+스크립트 실행.
+
+    ./deploy.sh
+    
+![4](../img/8장/4.png)    
+
+
+nohup.out 파일 열기
+
+    vim nohup.out
+    
+ClientRegistrationReopsitory를 찾을수없다고 에러 발생.
+
+
+
+        

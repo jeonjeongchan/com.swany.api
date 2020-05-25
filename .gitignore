@@ -2,7 +2,6 @@
 
 .gradle
 .idea
-img
-md
 application-oauth.properties
 application-google.properties
+
