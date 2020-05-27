@@ -18,9 +18,9 @@ before_install:
   - chmod +x gradlew
 
 before_deploy:
-  -zip -r com.swany.api *
-  -mkdir -p deploy
-  -mv com.swany.api.zip deploy/com.swany.api.zip
+  - zip -r com.swany.api *
+  - mkdir -p deploy
+  - mv com.swany.api.zip deploy/com.swany.api.zip
 
 deploy:
   - provider: s3
