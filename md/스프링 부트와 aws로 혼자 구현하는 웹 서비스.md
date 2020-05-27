@@ -1252,4 +1252,170 @@ build.gradle와 같은 위치에서 .travis.yml 파일 생성
 
 추가해준다.  
 
-![6](../img/9장/6.png)         
+![6](../img/9장/6.png)   
+
+![7](../img/9장/7.png)  
+
+![8](../img/9장/8.png)     
+
+## 9.3 Travis CI와 AWS S3 연동하기
+
+S3 : AWS에서 제공하는 일종의 파일 서버.<br>
+주로 이미지 파일을 업로드 할때 사용.
+
+Travis CI 연동 구조
+
+![9](../img/9장/9.png)
+
+실제 배포는 AWS CodeDeploy 서비스를 이용.
+
+
+AWS Key 발급
+
+접근 가능한 권한을 가진 KEY를 생성해서 사용해보자.
+
+IAM : AWS에서 제공하는 서비스의 접근 방식과 권한을 관리한다.
+
+AWS에서 IAM 검색후
+
+![10](../img/9장/10.png)
+
+사용자 -> 사용자 추가 누르기
+
+![11](../img/9장/11.png)
+
+이름과 엑세스 유형 선택
+
+권한 설정 방식은 기존 정책 직접 연결을 선택.
+
+![12](../img/9장/12.png)
+
+![13](../img/9장/13.png)
+
+![14](../img/9장/14.png)
+
+태그는 이름 알아볼수있게 정해준다.
+
+![15](../img/9장/15.png)
+
+잘 작성했는지 확인.
+
+![16](../img/9장/16.png)
+
+완료가 되면 엑세스 키와 비밀 엑세스 키가 생성이 됬다.
+     
+![17](../img/9장/17.png)
+
+키등록
+
+Travis CI의 설정 화면으로 이동   
+
+![18](../img/9장/18.png)
+
+Environment Variables 이 항목에서
+
+AWS_ACCESS_KEY, AWS_SECRET_KEY를 변수로 해서 IAM 사용자에서 발급받은 키 값들을 등록한다.
+
+    AWS_ACCESS_KEY : 엑세스 키ID
+    AWS_SECRET_KEY : 비밀 엑세스 키
+
+![19](../img/9장/19.png)  
+
+![20](../img/9장/20.png)
+
+등록을 했으면 .travis.yml에서 사용할 수 있다.
+
+S3버킷 생성  
+
+![21](../img/9장/21.png)
+ 
+![22](../img/9장/22.png)
+
+검색하고 버킷 만들기 클릭
+
+![23](../img/9장/23.png)
+
+버킷이름 짓기
+
+![24](../img/9장/24.png)
+
+별다른 설정없이 다음
+
+![25](../img/9장/25.png)
+
+모든 엑세스 차단 설정
+
+![26](../img/9장/26.png)
+
+생성된 모습.
+
+.travis.yml 추가
+
+    '''
+    before_deploy:
+      -zip -r com.swany.api *
+      -mkdir -p deploy
+      -mv com.swany.api.zip deploy/com.swany.api.zip
+    
+    deploy:
+      - provider: s3
+        access_key_id: $AWS_ACCESS_KEY # Travis repo settings에  설정된 값
+    
+        secret_access_key : $AWS_SECRET_KEY # Travis repo settings에 설정된 값
+    
+        bucket: com.swany.build # S3 버킷
+        region: ap-northeast-2
+        skip_cleanup: true
+        acl: private # zip 파일 접근을 private으로
+        local_dir: deploy # before_deploy에서 생성한 디렉토리
+        wait-until-deployed: true
+        
+추가
+
+전체 코드
+
+    language: java
+    jdk:
+      - openjdk8
+    
+    branches:
+      only:
+        - master
+    
+    # Travis CI 서버의 Home
+    cache:
+      directroies:
+        - '$HOME/.m2/repository'
+        - '$HOME/.gradle'
+    
+    script: "./gradlew clean build"
+    
+    before_install:
+      - chmod +x gradlew
+    
+    before_deploy:
+      -zip -r com.swany.api *
+      -mkdir -p deploy
+      -mv com.swany.api.zip deploy/com.swany.api.zip
+    
+    deploy:
+      - provider: s3
+        access_key_id: $AWS_ACCESS_KEY # Travis repo settings에  설정된 값
+    
+        secret_access_key : $AWS_SECRET_KEY # Travis repo settings에 설정된 값
+    
+        bucket: com.swany.build # S3 버킷
+        region: ap-northeast-2
+        skip_cleanup: true
+        acl: private # zip 파일 접근을 private으로
+        local_dir: deploy # before_deploy에서 생성한 디렉토리
+        wait-until-deployed: true
+    
+    # CI 실행 완료 시 메일로 알람
+    notifications:
+      email:
+        recipients:
+          - junjungchan@naver.com
+          
+다 됬으면 푸쉬~
+    
