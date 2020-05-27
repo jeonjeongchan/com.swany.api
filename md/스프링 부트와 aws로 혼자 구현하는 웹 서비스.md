@@ -1353,9 +1353,9 @@ S3버킷 생성
 
     '''
     before_deploy:
-      -zip -r com.swany.api *
-      -mkdir -p deploy
-      -mv com.swany.api.zip deploy/com.swany.api.zip
+      - zip -r com.swany.api *
+      - mkdir -p deploy
+      - mv com.swany.api.zip deploy/com.swany.api.zip
     
     deploy:
       - provider: s3
@@ -1394,9 +1394,9 @@ S3버킷 생성
       - chmod +x gradlew
     
     before_deploy:
-      -zip -r com.swany.api *
-      -mkdir -p deploy
-      -mv com.swany.api.zip deploy/com.swany.api.zip
+      - zip -r com.swany.api *
+      - mkdir -p deploy
+      - mv com.swany.api.zip deploy/com.swany.api.zip
     
     deploy:
       - provider: s3
