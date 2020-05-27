@@ -18,7 +18,7 @@ before_install:
   - chmod +x gradlew
 
 before_deploy:
-  - zip -r com.swany.api * com.swany.api
+  - zip -r com.swany.api *
   - mkdir -p deploy
   - mv com.swany.api.zip deploy/com.swany.api.zip
 
@@ -26,7 +26,7 @@ deploy:
   - provider: s3
     access_key_id: $AWS_ACCESS_KEY # Travis repo settings에  설정된 값
 
-    secret_access_key : $AWS_SECRET_KEY # Travis repo settings에 설정된 값
+    secret_access_key: $AWS_SECRET_KEY # Travis repo settings에 설정된 값
 
     bucket: com-swany-build # S3 버킷
     region: ap-northeast-2
