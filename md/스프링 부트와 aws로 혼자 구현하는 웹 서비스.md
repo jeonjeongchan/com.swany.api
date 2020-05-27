@@ -1011,6 +1011,234 @@ nohup.out 파일 열기
     
 ClientRegistrationReopsitory를 찾을수없다고 에러 발생.
 
+##8.3 외부 Security 파일 등록하기
 
+    ClientRegistrationReopsitory를 생성하려면 clientId, clientSecret가 필수.
+    
+    git에서 제외 대상이면 ec2에서 직접 넣어주자.
+    
+app 디렉토리에 properties 파일 생성
+
+    vim /home/ec2-user/app/application-oauth.properties
+    
+application-oauth.properties 로컬에 있는것을 복사해서 붙여넣기
+
+application-oauth.properties 파일을 쓰도록 deploy.sh 수정
+
+    ...
+    nohup java -jar \
+            -Dspring.config.location=classpath:/application.properties,/home/ec2-user/app/application-oauth.properties \
+                $REPOSITORY/$JAR_NAME 2>&1 &
+                
+   
+주의 : 띄어쓰기, 다음줄에 입력시 신중하게 작성을 해야된다.         
+
+![5](../img/8장/5.png)       
+
+정상적으로 실행 됬다.
+
+##8.4 스프링 부트 프로젝트로 RDS 접근하기.
+
+마리아DB에서 스프링부트 프로젝트 실행 하기 위한 작업.
+
+    * 테이블 생성 : 직접 쿼리 이용.
+    
+    * 프로젝트 설정 : 드라이버 추가.
+    
+    * EC2 설정 : 접속 정보 보호.
+ 
+RDS 테이블 생성
+
+JPA가 사용될 엔티티 테이블.<br>
+스프링 세션이 사용될 테이블.<br>
+2가지 생성.
+
+deploy.sh를 실행하고
+vim nohup.out를 열어보면 posts와 user가 있다.
+복사하여 RDS에 반영하자.
+![6](../img/8장/6.png)  
+
+스프링 세션 테이블 생성
+
+intelliJ에서 Ctrl+Shift+N으로 schema-mysql.sql 파일 검색 
+
+    CREATE TABLE SPRING_SESSION (
+    	PRIMARY_ID CHAR(36) NOT NULL,
+    	SESSION_ID CHAR(36) NOT NULL,
+    	CREATION_TIME BIGINT NOT NULL,
+    	LAST_ACCESS_TIME BIGINT NOT NULL,
+    	MAX_INACTIVE_INTERVAL INT NOT NULL,
+    	EXPIRY_TIME BIGINT NOT NULL,
+    	PRINCIPAL_NAME VARCHAR(100),
+    	CONSTRAINT SPRING_SESSION_PK PRIMARY KEY (PRIMARY_ID)
+    ) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+    
+    CREATE UNIQUE INDEX SPRING_SESSION_IX1 ON SPRING_SESSION (SESSION_ID);
+    CREATE INDEX SPRING_SESSION_IX2 ON SPRING_SESSION (EXPIRY_TIME);
+    CREATE INDEX SPRING_SESSION_IX3 ON SPRING_SESSION (PRINCIPAL_NAME);
+    
+    CREATE TABLE SPRING_SESSION_ATTRIBUTES (
+    	SESSION_PRIMARY_ID CHAR(36) NOT NULL,
+    	ATTRIBUTE_NAME VARCHAR(200) NOT NULL,
+    	ATTRIBUTE_BYTES BLOB NOT NULL,
+    	CONSTRAINT SPRING_SESSION_ATTRIBUTES_PK PRIMARY KEY (SESSION_PRIMARY_ID, ATTRIBUTE_NAME),
+    	CONSTRAINT SPRING_SESSION_ATTRIBUTES_FK FOREIGN KEY (SESSION_PRIMARY_ID) REFERENCES SPRING_SESSION(PRIMARY_ID) ON DELETE CASCADE
+    ) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+    
+복사하여 RDS에 반영하기.
+
+프로젝트 설정
+
+Maria DB 드라이버 build.gradle 등록.
+
+    compile("org.mariadb.jdbc:mariadb-java-client")
+        
+application-real.properties resource 디렉토리에 추가.
+
+    spring.profiles.include=oauth,real-db
+    spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL5InnoDBDialect
+    spring.session.store-type=jdbc
+    
+완료가 되었으면 깃허브로 푸쉬.
+
+EC2 설정
+
+app 디렉토리에 application-real-db.properties 파일을 생성합니다.
+
+    vim ~/app/application-real-db.properties
+    
+    * 내용추가
+    
+    spring.jpa.hibernate.ddl-auto=none
+    spring.datasource.url=jdbc:mariadb://com-swany.caxeujmlufgo.ap-northeast-2.rds.amazonaws.com:3306/com_swany
+    spring.datasource.username=jeon
+    spring.datasource.password=Wkdlzhvl159
+    spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
+
+deploy.sh가 real profile을 쓸수 있도록 수정.
+
+    nohup java -jar \
+             -Dspring.config.location=classpath:/application.properties,/home/ec2-user/app/application-oauth.properties,/home/ec2-user/app/application-real-db.properties \
+            -Dspring.profiles.active=real \
+            $REPOSITORY/$JAR_NAME 2>&1 &
 
         
+deploy.sh를 실행해서 nohup.out 파일을 열어서 포트번호가 보이면 성공.
+
+    입력하여 html 코드가 보이면 성공.
+    
+    curl localhost:8080  
+    
+##8.5 EC2에서 소셜 로그인하기
+
+aws 보안 그룹변경
+
+![7](../img/8장/7.png) 
+
+aws EC2 도메인으로 접속
+
+왼쪽 사이드바 '인스턴스' 메뉴를 클릭. <br>
+
+EC2 인스턴스를 선택하면 퍼블릭 DNS를 확인할 수 있음.
+
+![8](../img/8장/8.png) 
+
+8787을 붙여서 브라우저에 입력하기.
+
+![9](../img/8장/9.png) 
+
+도메인을 가진 서비스가 되었지만 구글과 네이버 로그인이 안된다.<br>
+둘다 등록을 해보자.
+
+![10](../img/8장/10.png) 
+
+![11](../img/8장/11.png)
+ 
+![12](../img/8장/12.png) 
+
+![13](../img/8장/13.png) 
+
+네이버도 똑같이 네이버 api 설정을 찾아가서 url을 추가해주면 된다.
+
+# 챕터9. Travis CI 배포 자동화
+
+병합되고, 테스트를 수행할때 자동으로 배포를 하는 환경을 안만들어주면 실수할 여지가 많아진다. <br>
+보완을 해보자.
+
+## 9.1 CI & CD 소개
+
+CI (지속적 통합) : VCS 시스템에 (git) 푸쉬를 하게되면 자동으로 테스트와 빌드가 수행되어 안정적인 배포파일을 만드는 과정.
+
+CD (지속적 배포) : 빌드 결과를 자동으로 운영 서버에 무중단 배포까지 진행되는 과정.
+
+CI 규칙 4가지
+
+    * 모든 소스가 살아 있고, 누구든 현재의 소스에 접근할 수 있는 단일지점을 유지.
+    
+    * 빌드 프로세스를 자동화해서 누구든 소스로부터 시스템을 빌드하는 단일 명령어를 사용할 수 있게 할 것.
+    
+    * 테스팅을 자동화해서 단일 명령어로 언제든지 시스템에 대한 건전한 테스트 수트를 실행할 수 있게 할 것.
+    
+    * 누구나 현재 실행 파일을 지금까지 가장 완전한 실행 파일을 얻었다는 확실을 하게 할 것.
+    
+제일 중요한 것 '테스팅 자동화'
+
+## 9.2 Travis CI 연동하기
+
+Travis CI
+
+무료서비스.
+
+https://travis-ci.org/ 클릭
+
+로그인 -> 계정명 -> settings 클릭
+
+![1](../img/9장/1.png) 
+
+상태바 활성화.
+
+![2](../img/9장/2.png) 
+
+그리고 활성화된 저장소 이름을 클릭.
+
+![3](../img/9장/3.png) 
+
+Travis CI 웹사이트에서 설정 끝.
+
+
+프로젝트 설정
+
+.travis.yml 파일로 한다.
+
+yml 파일 확장자 : YAML
+
+YAML : JSON에서 괄호를 제거 한 것.<br>
+읽기 쉽게 하기 위해서 사용.
+
+build.gradle와 같은 위치에서 .travis.yml 파일 생성
+
+작성.
+
+    language: java
+    jdk:
+      - openjdk8
+    
+    branches:
+      only:
+        - master
+        
+    # Travis CI 서버의 Home
+    cache:
+      directroles:
+        - '$HOME/.m2/repository'
+        - '$HOME/.gradle'
+    
+    script: "./gradlew clean build"
+    
+    # CI 실행 완료 시 메일로 알람
+    notifications:
+      email:
+        recipients:
+          - 본인 메일 주소
+
+작성 후 master 브랜치에 커밋, 푸쉬          
