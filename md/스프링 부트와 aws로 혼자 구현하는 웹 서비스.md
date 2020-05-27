@@ -1404,7 +1404,7 @@ S3버킷 생성
     
         secret_access_key : $AWS_SECRET_KEY # Travis repo settings에 설정된 값
     
-        bucket: com.swany.build # S3 버킷
+        bucket: com-swany-build # S3 버킷
         region: ap-northeast-2
         skip_cleanup: true
         acl: private # zip 파일 접근을 private으로
