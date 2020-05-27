@@ -18,7 +18,7 @@ before_install:
   - chmod +x gradlew
 
 before_deploy:
-  - zip -r com.swany.api com.swany.api
+  - zip -r com.swany.api * com.swany.api
   - mkdir -p deploy
   - mv com.swany.api.zip deploy/com.swany.api.zip
 
