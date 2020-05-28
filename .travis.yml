@@ -8,7 +8,7 @@ branches:
 
 # Travis CI 서버의 Home
 cache:
-  directroies:
+  directories:
     - '$HOME/.m2/repository'
     - '$HOME/.gradle'
 
@@ -18,7 +18,7 @@ before_install:
   - chmod +x gradlew
 
 before_deploy:
-  - zip com.swany.api *
+  - zip -r com.swany.api *
   - mkdir -p deploy
   - mv com.swany.api.zip deploy/com.swany.api.zip
 
