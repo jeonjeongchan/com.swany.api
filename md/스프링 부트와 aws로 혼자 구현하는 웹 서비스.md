@@ -1614,7 +1614,106 @@ appspec.yml 파일 생성하고 작성.
       bundle_type: zip # 압축 확장자
       application: com.swany.api # 웹 콘솔에서 등록한 CodeDeploy 애플리케이션
       
-      deployment_group: com.swamy.api-group # 웹콘솔에서 등록한 CodeDeploy 애플리케이션
+      deployment_group: com.swany.api-group # 웹콘솔에서 등록한 CodeDeploy 애플리케이션
       
       region: ap-northeast-2
-      wait-until-deployed: true          
+      wait-until-deployed: true
+      
+![51](../img/9장/51.png)                
+
+배포 완료한 모습
+
+EC2에서 파일들이 잘도착했는지 확인
+
+    cd /home/ec2-user/app/step2/zip
+    
+    ll
+    
+![52](../img/9장/52.png)
+
+잘들어간 모습이다.
+
+연동완료~
+
+## 9.5 배포 자동화 구성
+
+jar를 배포하여 실행 까지 해보자.
+
+deploy.sh 파일 추가
+
+step2에 사용할 deploy.sh을 생성
+
+scripts 디렉토리 생성 -> deploy.sh 생성
+
+    #!/bin/bash
+    
+    REPOSITORY=/home/ec2-user/app/step2
+    PROJECT_NAME=com.swany.api
+    
+    echo "> Build 파일 복사"
+    
+    cp $REPOSITORY/zip/*.jar $REPOSITORY/
+    
+    echo "> 현재 구동 중인 애플리케이션 pid 확인"
+    
+    CURRENT_PID$(pgrep -fl com.swany.api | grep jar | awk '{print $1}')
+    
+    echo  "현재 구동 중인 애플리케이션pid: $CURRENT_PID"
+    
+    if [ -z "$CURRENT_PID" ]; then
+        echo "> 현재 구동 중인 애플리케이션이 없으므로 종료하지 않습니다."
+    else 
+        echo "> kill -15 $CURRENT_PID"
+        kill -15 $CURRENT_PID
+        sleep 5
+    fi 
+    
+    echo "> 새 애플리케이션 배포"
+    
+    JAR_NAME=$(ls -tr $REPOSITORY/*.jar | tail -n 1)
+    
+    echo "> JAR Name: $JAR_NAME"
+    
+    echo "> $JAR_NAME 에 실행권한 추가"
+    
+    chmod +x $JAR_NAME
+    
+    echo "> $JAR_NAME 실행"
+    
+    nohup java -jar \ -Dspring.config.location=classpath:/application.properties,
+    classpath:/application-real.properties,/home/ec2-user/app/application-oauth.properties,
+    /home/ec2-user/app/application-real-db.properties \
+      -Dspring.properties.active=real
+      $JAR_NAME > $REPOSITORY/nohup.out 2>&1 &
+
+내용 작성
+
+.travis.yml 수정
+
+before_deploy 수정
+
+    before_deploy:
+      - mkdir -p before-deploy # zip에 포함시킬 파일들을 담을 디렉토리 생성
+      - cp scripts/*.sh before-deploy/
+      - cp appsepc.yml before-deploy/
+      - cp build/libs/*.jar before-deploy/
+      - cd before-deploy && zip -r before-deploy * # before-deploy로 이동 후 전체 압축
+        
+      - cd ../ && mkdir -p deploy # 상위 디렉토리로 이동 후 deploy 디렉토리 생성
+      - mv before-deploy/before-deploy.zip deploy/com.swany.api.zip # deploy로 zip파일 이동
+           
+appspec 수정
+  
+주의 : 들여쓰기 잘하기           
+
+    permissions:
+        - object: /
+          pattern: "**"
+          owner: ec2-user
+          group: ec2-user
+    
+    hooks:
+        ApplicationStart
+            - location: deploy.sh
+              timeout: 60
+              runas: ec2-user
