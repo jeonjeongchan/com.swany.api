@@ -14,15 +14,13 @@ cache:
 
 before_install:
   - chmod +x gradlew
-  - chmod +x ./gradlew
-
 
 script: "./gradlew clean build"
 
 before_deploy:
   - zip -r com.swany.api *
   - mkdir -p deploy
-  - mv com.swany.api.zip deploy/com.swany.api.zip
+  - mv com.swany.api deploy/com.swany.api
 
 deploy:
   - provider: s3
