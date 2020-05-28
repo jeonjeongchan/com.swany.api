@@ -12,15 +12,14 @@ cache:
     - '$HOME/.m2/repository'
     - '$HOME/.gradle'
 
-script: "./gradlew clean build"
-
 before_install:
   - chmod +x gradlew
+
+script: "./gradlew clean build"
 
 before_deploy:
   - zip -r com.swany.api *
   - mkdir -p deploy
-  - ll
   - mv com.swany.api.zip deploy/com.swany.api.zip
 
 deploy:
