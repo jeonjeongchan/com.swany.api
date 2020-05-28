@@ -40,7 +40,7 @@ deploy:
     key: com.swany.api # 빌드 파일을 압축해서 전달
     bundle_type: zip # 압축 확장자
     application: com.swany.api # 웹 콘솔에서 등록한 CodeDeploy 애플리케이션
-    deployment_group: com.swamy.api-group # 웹콘솔에서 등록한 CodeDeploy 애플리케이션
+    deployment_group: com.swany.api-group # 웹콘솔에서 등록한 CodeDeploy 애플리케이션
     region: ap-northeast-2
     wait-until-deployed: true
 
