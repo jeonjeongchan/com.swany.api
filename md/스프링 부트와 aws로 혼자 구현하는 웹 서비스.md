@@ -1396,7 +1396,7 @@ S3버킷 생성
     before_deploy:
       - zip -r com.swany.api *
       - mkdir -p deploy
-      - mv com.swany.api.zip deploy/com.swany.api.zip
+      - mv com.swany.api deploy/com.swany.api
     
     deploy:
       - provider: s3
@@ -1418,4 +1418,203 @@ S3버킷 생성
           - junjungchan@naver.com
           
 다 됬으면 푸쉬~
+ 
+![27](../img/9장/27.png)
+
+![28](../img/9장/28.png)   
+
+잘된 모습이다. 
+
+![29](../img/9장/29.png)  
+
+S3 버킷 모습
+
+(zip 확장자를 뺏더니 압축파일 모양은 아니다.
+추후 다시 해보기.)
+
+## 9.4 Travis CI와 AWS S3, CodeDeploy 연동하기
+
+EC2에 IAM 역할 추가하기
+
+IAM 검색 -> 역할 -> 역할 만들기
+
+![30](../img/9장/30.png)  
+
+IAM 사용자와 역할의 차이
+
+    역할
+        
+        * AWS 서비스에만 할당할 수 있는 권한
+        * EC2, CodeDeploy, SQS 등
+        
+    사용자
     
+        * AWS 서비스 외에 사용할 수 있는 권한
+        * 로컬 PC, IDC 서버등
+        
+EC2에 사용할 역할 권한을 만들어보자.
+
+AWS 서비스 -> EC2 선택        
+
+![31](../img/9장/31.png)
+
+EC2RoleFOrA 검색하여  AmazonEC2RoleforAWSCodeDeploy를 선택  
+
+![32](../img/9장/32.png)      
+
+그 다음 태그 이름은 마음대로 정해도 되지만 책에 있는 이름대로 지어보자.   
+    
+![33](../img/9장/33.png)          
+
+![34](../img/9장/34.png) 
+
+역할을 만들었으면 EC2 서비스에 등록 해보자.
+
+EC2 인스턴스 목록 -> 본인의 인스턴스를 마우스 오른쪽 버튼 클릭 ->
+인스턴스 설정 -> IAM 역할 연결/바꾸기 차례대로 선택
+
+![35](../img/9장/35.png)  
+
+방금 만든 역할을 선택.
+
+![36](../img/9장/36.png) 
+
+선택 완료하면 재부팅.
+
+![37](../img/9장/37.png) 
+
+
+CodeDeploy 에이전트 설치
+
+EC2에 접속해서 다음 명령어를 입력.
+
+    aws s3 cp s3://aws-codedeploy-ap-northeast-2/latest/install . --region ap-northeast-2
+
+    띄어쓰기 주의
+    
+![38](../img/9장/38.png)     
+
+이 메세지가 뜨면 성공.
+
+install 파일 실행 권한 추가.
+
+    chmod +x ./install
+
+install 파일로 설치를 진행.
+
+설치가 끝났으면 Agent가 정상적으로 실행되고 있는지 상태 검사.
+
+    sudo service codedeploy-agent status
+    
+![39](../img/9장/39.png)      
+
+이렇게 뜨면 정상.
+
+CodeDeploy를 위한 권한 생성.
+
+EC2에 접근할려면 권한 필요.
+
+IAM 역할을 생성.
+
+AWS 서비스 -> CodeDeploy 선택.
+
+![40](../img/9장/40.png)
+
+![41](../img/9장/41.png)
+
+![41](../img/9장/42.png)
+
+권한이 하나뿐이라 그냥 다음 누르면 된다.
+
+![43](../img/9장/43.png)
+
+완료.
+
+CodeDeploy 생성
+
+배포 삼형제
+
+    Code Commit
+        
+        * 깃허브과 같은 코드 저장소 역할을 한다.
+        * 깃허브에서 무료로 프라이빗 지원을 하고 있어서 거의 사용x
+        
+    Code Bild
+    
+        * 빌드용 서비스
+        * 규모가 있는 서비스에서 대부분 젠킨스/팀시티를 사용해 거의 사용x
+        
+    CodeDeploy
+    
+        * AWS의 배포 서비스.
+        * 대체재가 없다.
+        * 많은 배포 기능을 지원한다.
+        
+Code Commit의 역할 : 깃허브
+
+Code Build의 열할 : Travis CI
+
+남은 CodeDeploy 서비스를 추가하면 삼형제 완성.
+
+CodeDeploy 서비스 -> 애플리케이션 생성  
+
+![44](../img/9장/44.png)  
+
+![45](../img/9장/45.png) 
+
+입력하고 생성.
+
+그리고 배포 그룹 생성 버튼 클릭.
+
+![46](../img/9장/46.png) 
+
+![47](../img/9장/47.png) 
+
+![48](../img/9장/48.png)
+
+![49](../img/9장/49.png) 
+
+![50](../img/9장/50.png)
+
+1대 서버이니 전체 배포 옵션 선택.
+
+Travis CI, S3, CodeDeploy 연동
+
+S3에서 넘겨줄 zip 파일을 저장할 디렉토리를 하나 생성.
+
+    mkdir ~/app/step2 && mkdir ~/app/step2/zip
+    
+Travis CI의 Build가 끝나면 S3에 zip 파일이 전송되고, 이 zip 파일은 / home/ec2-user/app/step2/zip로 복사되어 압축을 풀 예정이다.
+
+Travis CI의 설정은 .travis.yml으로 진행.
+
+AWS CodeDeploy의 설정은 appspec.yml로 진행. 
+
+appspec.yml 파일 생성하고 작성.
+
+    version: 0.0
+    os: linux
+    files:
+      - source: /
+        destination: /home/ec2-user/app/step2/zip/
+        overwrite: yes
+        
+.travis,yml CodeDeploy 내용 추가.
+
+    deploy:
+        ...
+    
+    - provider: codedeploy
+      access_key_id: $AWS_ACCESS_KEY # Travis repo settings에 설정된 값
+      secret_access_key: $AWS_SECRET_KEY # Travis repo settings에 설정된 값
+      
+      bucket: com-swany-build # S3 버킷
+      key: com.swany.api.zip # 빌드 파일을 압축해서 전달
+      
+      bundle_type: zip # 압축 확장자
+      application: com.swany.api # 웹 콘솔에서 등록한 CodeDeploy 애플리케이션
+      
+      deployment_group: com.swamy.api-group # 웹콘솔에서 등록한 CodeDeploy 애플리케이션
+      
+      region: ap-northeast-2
+      wait-until-deployed: true          
