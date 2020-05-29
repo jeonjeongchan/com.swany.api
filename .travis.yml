@@ -42,7 +42,7 @@ deploy:
     access_key_id: $AWS_ACCESS_KEY # Travis repo settings에 설정된 값
     secret_access_key: $AWS_SECRET_KEY # Travis repo settings에 설정된 값
     bucket: com-swany-build # S3 버킷
-    key: com.swany.api # 빌드 파일을 압축해서 전달
+    key: com.swany.api.zip # 빌드 파일을 압축해서 전달
     bundle_type: zip # 압축 확장자
     application: com.swany.api # 웹 콘솔에서 등록한 CodeDeploy 애플리케이션
     deployment_group: com.swany.api-group # 웹콘솔에서 등록한 CodeDeploy 애플리케이션
