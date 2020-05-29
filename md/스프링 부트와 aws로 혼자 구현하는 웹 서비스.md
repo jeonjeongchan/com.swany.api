@@ -1695,7 +1695,7 @@ before_deploy 수정
     before_deploy:
       - mkdir -p before-deploy # zip에 포함시킬 파일들을 담을 디렉토리 생성
       - cp scripts/*.sh before-deploy/
-      - cp appsepc.yml before-deploy/
+      - cp appspec.yml before-deploy/
       - cp build/libs/*.jar before-deploy/
       - cd before-deploy && zip -r before-deploy * # before-deploy로 이동 후 전체 압축
         
@@ -1717,3 +1717,9 @@ appspec 수정
             - location: deploy.sh
               timeout: 60
               runas: ec2-user
+              
+![53](../img/9장/53.png)   
+
+완료가 되면 이렇게 떴을것이다.
+
+![54](../img/9장/54.png)             
