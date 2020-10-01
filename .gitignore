@@ -34,5 +34,6 @@ rebel.xml
 application-oauth.properties
 
 
-/img/
-/md/
+.jpg
+.png
+.md
